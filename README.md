@@ -22,7 +22,7 @@ git clone https://github.com/ajay-pratap-singh-518/Capsule-Vision-2024-challenge
 
 cd Capsule-Vision-2024-Challenge
 
-Install the required dependencies: Ensure you have the necessary Python packages installed by running:
+Install the required dependencies: Ensure you have the necessary Python packages installed by running:-
 pip install -r requirements.txt
 
 Run the training script: To train the model, execute:
