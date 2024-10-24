@@ -17,20 +17,20 @@ Contains the script valid.py for validating the model during the training proces
 
 To get started, follow these steps:
 
-Clone the repository:
+1. Clone the repository:
 git clone https://github.com/ajay-pratap-singh-518/Capsule-Vision-2024-challenge.git
 
 cd Capsule-Vision-2024-Challenge
 
-Install the required dependencies: Ensure you have the necessary Python packages installed by running:-
+2. Install the required dependencies: Ensure you have the necessary Python packages installed by running:-
 pip install -r requirements.txt
 
-Run the training script: To train the model, execute:
+3. Run the training script: To train the model, execute:
 python train/train.py
 
-Run the validation script: For validation during training, use:
+4. Run the validation script: For validation during training, use:
 python valid/valid.py
 
-Run the testing script: Once the model is trained, you can evaluate it using:
+5. Run the testing script: Once the model is trained, you can evaluate it using:
 python valid/valid.py
 
