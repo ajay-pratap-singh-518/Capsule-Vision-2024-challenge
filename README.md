@@ -10,7 +10,7 @@ Contains the script train.py for training the model.
 Test/ :
 Contains the script test.py for testing and evaluating the model's performance on unseen data.
 
-Validtion/ :
+Validation/ :
 Contains the script valid.py for validating the model during the training process.
 
 **Setup Instructions**
