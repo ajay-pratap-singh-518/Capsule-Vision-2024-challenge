@@ -5,13 +5,13 @@ This repository contains the implementation of the Capsule Vision 2024 challenge
 **Folder Structure**
 
 Train/ :
-Contains the script train.py for training the model.
+Contains the script train.py for training and validating the model.
 
 Test/ :
 Contains the script test.py for testing and evaluating the model's performance on unseen data.
 
 Validation/ :
-Contains the script valid.py for validating the model during the training process.
+Contains the script valid.py for getting the evaluation matrics on validation data.
 
 **Setup Instructions**
 
