@@ -1,1 +1,1 @@
-# Capsule-Vision-2024-challenge
+This repository contains the implementation of the Capsule Vision 2024 challenge. The project is structured into three main folders: train, test, and valid, each containing Python scripts to handle the corresponding tasks.
