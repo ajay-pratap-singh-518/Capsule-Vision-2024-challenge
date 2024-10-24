@@ -20,7 +20,7 @@ To get started, follow these steps:
 1. Clone the repository:
 git clone https://github.com/ajay-pratap-singh-518/Capsule-Vision-2024-challenge.git
 
-2. Navigates into the folder
+2. Navigates into the folder:
 cd Capsule-Vision-2024-Challenge
 
 3. Install the required dependencies: Ensure you have the necessary Python packages installed by running:-
