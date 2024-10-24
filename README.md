@@ -20,17 +20,18 @@ To get started, follow these steps:
 1. Clone the repository:
 git clone https://github.com/ajay-pratap-singh-518/Capsule-Vision-2024-challenge.git
 
-  cd Capsule-Vision-2024-Challenge
+2. Navigates into the folder
+cd Capsule-Vision-2024-Challenge
 
-2. Install the required dependencies: Ensure you have the necessary Python packages installed by running:-
+3. Install the required dependencies: Ensure you have the necessary Python packages installed by running:-
 pip install -r requirements.txt
 
-3. Run the training script: To train the model, execute:
+4. Run the training script: To train the model, execute:
 python train/train.py
 
-4. Run the validation script: For validation during training, use:
+5. Run the validation script: For validation during training, use:
 python valid/valid.py
 
-5. Run the testing script: Once the model is trained, you can evaluate it using:
+6. Run the testing script: Once the model is trained, you can evaluate it using:
 python valid/valid.py
 
