@@ -14,6 +14,7 @@ Validtion/
 Contains the script valid.py for validating the model during the training process.
 
 **Setup Instructions**
+
 To get started, follow these steps:
 
 Clone the repository:
