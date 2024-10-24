@@ -8,15 +8,14 @@ from sklearn.utils.class_weight import compute_class_weight
 import os
 import numpy as np
 import torch.nn.functional as F
-# Define device globally
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+ 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')# Define device
 
-# Define class columns globally
-class_columns = ['Angioectasia', 'Bleeding', 'Erosion', 'Erythema', 'Foreign Body',
-                 'Lymphangiectasia', 'Normal', 'Polyp', 'Ulcer', 'Worms']
 
-# Define the Focal Loss function
-class FocalLoss(nn.Module):
+class_columns = ['Angioectasia', 'Bleeding', 'Erosion', 'Erythema', 'Foreign Body','Lymphangiectasia', 'Normal', 'Polyp', 'Ulcer', 'Worms']# Define each class columns 
+
+
+class FocalLoss(nn.Module):# Focal Loss function
     def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
@@ -37,10 +36,10 @@ class FocalLoss(nn.Module):
         else:
             return loss
 
-# Define the model for classification
-class SelfAttention(nn.Module):
+# Model for classification
+class attention_model(nn.Module):
     def __init__(self, in_channels, attention_size):
-        super(SelfAttention, self).__init__()
+        super(attention_model, self).__init__()
         self.query = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.key = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1)
@@ -48,62 +47,37 @@ class SelfAttention(nn.Module):
         
     def forward(self, x):
         batch_size, c, h, w = x.size()
-        
-        # Create query, key, and value tensors
-        query = self.query(x).view(batch_size, -1, h * w)  # (batch_size, attention_size, h * w)
-        key = self.key(x).view(batch_size, -1, h * w)  # (batch_size, attention_size, h * w)
-        value = self.value(x).view(batch_size, c, h * w)  # (batch_size, in_channels, h * w)
-        
-        # Compute attention scores
-        attention_scores = torch.bmm(query.transpose(1, 2), key)  # (batch_size, h * w, h * w)
-        attention_scores = attention_scores / (h * w) ** 0.5  # Scaled dot-product attention
-        
-        # Apply softmax to get attention map
-        attention_map = self.softmax(attention_scores)  # (batch_size, h * w, h * w)
-        
-        # Weighted sum of value tensor
-        out = torch.bmm(value, attention_map.transpose(1, 2))  # (batch_size, in_channels, h * w)
-        out = out.view(batch_size, c, h, w)  # Reshape back to original dimensions
-        
-        # Add residual connection
-        out = out + x
-        
+        query = self.query(x).view(batch_size, -1, h * w) # Create query, key, and value tensors
+        key = self.key(x).view(batch_size, -1, h * w)  
+        value = self.value(x).view(batch_size, c, h * w) 
+        attention_scores = torch.bmm(query.transpose(1, 2), key)  # Compute attention scores
+        attention_scores = attention_scores / (h * w) ** 0.5 
+        attention_map = self.softmax(attention_scores)# Apply softmax to get attention map
+        out = torch.bmm(value, attention_map.transpose(1, 2))  # Weighted sum of value tensor 
+        out = out.view(batch_size, c, h, w) 
+        out = out + x# Add residual connection
         return out
-class MobileNetV3ClassifierWithAttention(nn.Module):
+      
+class model_mobilenetv3(nn.Module):
     def __init__(self, num_classes=10, attention_size=64):
-        super(MobileNetV3ClassifierWithAttention, self).__init__()
-        # Load the pre-trained MobileNetV3 Large model
-        self.mobilenet_v3 = models.mobilenet_v3_large(weights='DEFAULT')
-        
-        # Get the number of input features for the classifier layer
-        in_features = self.mobilenet_v3.classifier[0].in_features
-        
-        # Add self-attention block after certain layers
-        self.self_attention = SelfAttention(in_channels=in_features, attention_size=attention_size)
-        
-        # Replace the classifier layer to match the number of classes
-        self.mobilenet_v3.classifier = nn.Sequential(
+        super(model_mobilenetv3, self).__init__(
+        self.mobilenet_v3 = models.mobilenet_v3_large(weights='DEFAULT') # Load the pre-trained MobileNetV3 Large model
+        in_features = self.mobilenet_v3.classifier[0].in_features# Get the number of input features for the classifier layer
+        self.self_attention = attention_model(in_channels=in_features, attention_size=attention_size)# Add self-attention block after certain layer
+        self.mobilenet_v3.classifier = nn.Sequential(  # Replace the classifier layer to match the number of classes
             nn.Linear(in_features, num_classes)
         )
 
     def forward(self, x):
-        # Pass through MobileNetV3 backbone
-        x = self.mobilenet_v3.features(x)
-        
-        # Apply self-attention block
-        x = self.self_attention(x)
-        
-        # Global Average Pooling (same as original MobileNetV3)
-        x = F.adaptive_avg_pool2d(x, (1, 1))
+        x = self.mobilenet_v3.features(x) # Pass through MobileNetV3 backbone
+        x = self.self_attention(x)# Apply self-attention block
+        x = F.adaptive_avg_pool2d(x, (1, 1)) # Global Average Pooling (same as original MobileNetV3)
         x = torch.flatten(x, 1)
-        
-        # Classification layer
-        x = self.mobilenet_v3.classifier(x)
-        
+        x = self.mobilenet_v3.classifier(x)# Classification layer
         return x
 
-# Define transformations for training
-train_transform = transforms.Compose([
+
+train_transform = transforms.Compose([     # Define transformations for training
     transforms.Resize((224, 224)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomRotation(10),
@@ -114,17 +88,10 @@ train_transform = transforms.Compose([
 
 # Function to calculate class weights
 def calculate_class_weights(dataset):
-    # Extract labels from the dataset
-    labels = [label for _, label in dataset]
-    
-    # Get unique classes present in the dataset
-    unique_classes = np.unique(labels)
-    
-    # Compute class weights only for the unique classes present
-    class_weights = compute_class_weight('balanced', classes=unique_classes, y=labels)
-    
-    # Convert class weights to tensor
-    return torch.tensor(class_weights, dtype=torch.float32)
+    labels = [label for _, label in dataset] # Extract labels from the dataset
+    unique_classes = np.unique(labels)# Get unique classes present in the dataset
+    class_weights = compute_class_weight('balanced', classes=unique_classes, y=labels)# Compute class weights only for the unique classes present
+    return torch.tensor(class_weights, dtype=torch.float32)# Convert class weights to tensor
 
 # Function to create data loaders
 def create_train_dataloader(train_dir, batch_size=32):
@@ -166,12 +133,12 @@ def train_model(train_loader, model, criterion, optimizer, num_epochs=50, output
         train_accuracies.append(train_accuracy)
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Training Accuracy: {train_accuracy:.2f}%')
 
-    # Save the trained model
-    model_path = os.path.join(output_folder, 'trained_model.pth')
+    
+    model_path = os.path.join(output_folder, 'trained_model.pth')# Save the trained model
     torch.save(model.state_dict(), model_path)
     print(f"Model saved to {model_path}")
 
-    # Optionally, save training losses and accuracies
+    # Save training losses and accuracies
     torch.save({
         'train_losses': train_losses,
         'train_accuracies': train_accuracies
@@ -185,7 +152,7 @@ if __name__ == "__main__":
     num_epochs = 50
 
     train_loader, train_dataset = create_train_dataloader(train_dir, batch_size=batch_size)
-    model = MobileNetV3ClassifierWithAttention(num_classes=10)
+    model = model_mobilenetv3(num_classes=10)
     class_weights = calculate_class_weights(train_dataset).to(device)
     criterion = FocalLoss(alpha=0.25, gamma=2.0)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
