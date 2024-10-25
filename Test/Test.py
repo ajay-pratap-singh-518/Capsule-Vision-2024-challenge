@@ -169,6 +169,8 @@ def create_test_dataloader(test_dir, batch_size=32):
     test_transform = transforms.Compose([
     transforms.Resize((256, 256)),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
 ])
     
     # Create the test dataset
@@ -294,7 +296,9 @@ model.to(device)
 # Create data loader for the test dataset
 transform = transforms.Compose([
     transforms.Resize((256, 256)),  # Resize to your desired input size
-    transforms.ToTensor(),           # Convert PIL image to tensor
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])# Convert PIL image to tensor
 ])
 
 test_folder="test_new/Images"
