@@ -60,9 +60,9 @@ class FocalLoss(torch.nn.Module):
             return loss
 
 # Define data loaders for training and validation
-class SelfAttention(nn.Module):
+class attention(nn.Module):
     def __init__(self, in_channels, attention_size):
-        super(SelfAttention, self).__init__()
+        super(attention, self).__init__()
         self.query = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.key = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1)
@@ -80,9 +80,9 @@ class SelfAttention(nn.Module):
         out = out.view(batch_size, c, h, w)  
         out = out + x # Add residual connection
         return out
-class MobileNetV3ClassifierWithAttention(nn.Module):
+class mobilenetv3(nn.Module):
     def __init__(self, num_classes=10, attention_size=64):
-        super(MobileNetV3ClassifierWithAttention, self).__init__()
+        super(mobilenetv3, self).__init__()
         self.mobilenet_v3 = models.mobilenet_v3_large(weights='DEFAULT') # Load the pre-trained MobileNetV3 Large model
         in_features = self.mobilenet_v3.classifier[0].in_features# Get the number of input features for the classifier layer
         self.self_attention = SelfAttention(in_channels=in_features, attention_size=attention_size)# Add self-attention block after certain layers
@@ -278,16 +278,16 @@ def generate_metrics_report(y_true, y_pred, class_columns):
 
 
 # Define the test directory and output folder
-test_dir = 'test_new/Images'
-output_folder = 'test_mobv3_atten_focal_proc'
+test_dir = 'Testing set/Testing set/Images'
+output_folder = 'test_mobv3_atten_focal'
 os.makedirs(output_folder, exist_ok=True)
 
 # Initialize the model, criterion, and optimizer
 num_classes = 10
-model = MobileNetV3ClassifierWithAttention(num_classes=10)
+model = mobilenetv3(num_classes=10)
 for name, layer in model.named_modules():
         print(name)
-model.load_state_dict(torch.load('atten_proc/results_mobv3_atten_focal_proc/model.pth'))  # Load the trained model weights
+model.load_state_dict(torch.load('atten/results_mobv3_atten_focal/model.pth'))  # Load the trained model weights
 model.eval()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
@@ -310,7 +310,7 @@ def evaluate_model_on_test(test_dir, gradcam_save_dir, model_path, transform):
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     
-    model = mobilenetv3_model(num_classes=len(class_columns))# Load the model
+    model = mobilenetv3(num_classes=len(class_columns))# Load the model
     
     model.load_state_dict(torch.load(model_path), strict=False)
     
