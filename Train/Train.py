@@ -18,10 +18,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
-# Define device globally
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# Define class columns globally
-class_columns = ['Angioectasia', 'Bleeding', 'Erosion', 'Erythema', 'Foreign Body', 'Lymphangiectasia', 'Normal', 'Polyp', 'Ulcer', 'Worms']
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')# Define device 
+
+class_columns = ['Angioectasia', 'Bleeding', 'Erosion', 'Erythema', 'Foreign Body', 'Lymphangiectasia', 'Normal', 'Polyp', 'Ulcer', 'Worms']# Define class columns 
 
 class FocalLoss(torch.nn.Module):
     def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
@@ -51,9 +51,9 @@ class FocalLoss(torch.nn.Module):
         else:
             return loss
 
-# Define data loaders for training and validation
 
-def create_dataloaders(train_dir, val_dir, batch_size=32):
+
+def create_dataloaders(train_dir, val_dir, batch_size=32):# Define data loaders for training and validation
     train_dataset = ImageFolder(root=train_dir, transform=train_transform)
     val_dataset = ImageFolder(root=val_dir, transform=val_transform)
     print(f"Number of images in train dataset: {len(train_dataset)}")
@@ -63,9 +63,9 @@ def create_dataloaders(train_dir, val_dir, batch_size=32):
 
     return train_loader, val_loader, train_dataset, val_dataset
     
-class SelfAttention(nn.Module):
+class attention_model(nn.Module):
     def __init__(self, in_channels, attention_size):
-        super(SelfAttention, self).__init__()
+        super(attention_model, self).__init__()
         self.query = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.key = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1)
@@ -73,58 +73,31 @@ class SelfAttention(nn.Module):
         
     def forward(self, x):
         batch_size, c, h, w = x.size()
-        
-        # Create query, key, and value tensors
-        query = self.query(x).view(batch_size, -1, h * w)  # (batch_size, attention_size, h * w)
-        key = self.key(x).view(batch_size, -1, h * w)  # (batch_size, attention_size, h * w)
-        value = self.value(x).view(batch_size, c, h * w)  # (batch_size, in_channels, h * w)
-        
-        # Compute attention scores
-        attention_scores = torch.bmm(query.transpose(1, 2), key)  # (batch_size, h * w, h * w)
-        attention_scores = attention_scores / (h * w) ** 0.5  # Scaled dot-product attention
-        
-        # Apply softmax to get attention map
-        attention_map = self.softmax(attention_scores)  # (batch_size, h * w, h * w)
-        
-        # Weighted sum of value tensor
-        out = torch.bmm(value, attention_map.transpose(1, 2))  # (batch_size, in_channels, h * w)
+        query = self.query(x).view(batch_size, -1, h * w) # Create query, key, and value tensors
+        key = self.key(x).view(batch_size, -1, h * w)  
+        value = self.value(x).view(batch_size, c, h * w)  
+        attention_scores = torch.bmm(query.transpose(1, 2), key)  # Compute attention scores
+        attention_scores = attention_scores / (h * w) ** 0.5  
+        attention_map = self.softmax(attention_scores) # Apply softmax to get attention map
+        out = torch.bmm(value, attention_map.transpose(1, 2))  # (batch_size, in_channels, h * w)# Weighted sum of value tensor
         out = out.view(batch_size, c, h, w)  # Reshape back to original dimensions
-        
-        # Add residual connection
-        out = out + x
-        
+        out = out + x # Add residual connection
         return out
-class MobileNetV3ClassifierWithAttention(nn.Module):
+class MobileNetV3Class(nn.Module):
     def __init__(self, num_classes=10, attention_size=64):
         super(MobileNetV3ClassifierWithAttention, self).__init__()
-        # Load the pre-trained MobileNetV3 Large model
-        self.mobilenet_v3 = models.mobilenet_v3_large(weights='DEFAULT')
-        
-        # Get the number of input features for the classifier layer
-        in_features = self.mobilenet_v3.classifier[0].in_features
-        
-        # Add self-attention block after certain layers
-        self.self_attention = SelfAttention(in_channels=in_features, attention_size=attention_size)
-        
-        # Replace the classifier layer to match the number of classes
+        self.mobilenet_v3 = models.mobilenet_v3_large(weights='DEFAULT')# Load the pre-trained MobileNetV3 Large model
+        in_features = self.mobilenet_v3.classifier[0].in_features # Get the number of input features for the classifier layer
+        self.self_attention = SelfAttention(in_channels=in_features, attention_size=attention_size)# Add self-attention block after certain layers
         self.mobilenet_v3.classifier = nn.Sequential(
             nn.Linear(in_features, num_classes)
         )
-
     def forward(self, x):
-        # Pass through MobileNetV3 backbone
-        x = self.mobilenet_v3.features(x)
-        
-        # Apply self-attention block
-        x = self.self_attention(x)
-        
-        # Global Average Pooling (same as original MobileNetV3)
-        x = F.adaptive_avg_pool2d(x, (1, 1))
+        x = self.mobilenet_v3.features(x) # Pass through MobileNetV3 backbone
+        x = self.self_attention(x)# Apply self-attention block
+        x = F.adaptive_avg_pool2d(x, (1, 1)) # Global Average Pooling (same as original MobileNetV3)
         x = torch.flatten(x, 1)
-        
-        # Classification layer
-        x = self.mobilenet_v3.classifier(x)
-        
+        x = self.mobilenet_v3.classifier(x) # Classification layer
         return x
 
 
@@ -142,70 +115,45 @@ val_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
-# Function to calculate class weights
-def calculate_class_weights(dataset):
+
+def calculate_class_weights(dataset):# Function to calculate class weights
     labels = [label for _, label in dataset]
     class_weights = compute_class_weight('balanced', classes=np.arange(10), y=labels)
     return torch.tensor(class_weights, dtype=torch.float32)
 
-    
-
 def save_predictions_to_excel(predictions, labels, logits, class_names, output_path):
-    # Ensure all inputs have the same length
     if not (len(predictions) == len(labels) == len(logits)):
         print("Mismatch detected:")
         print(f"Length of predictions: {len(predictions)}")
         print(f"Length of labels: {len(labels)}")
         print(f"Length of logits: {len(logits)}")
         raise ValueError("Mismatched lengths: Ensure that predictions, labels, and logits all have the same length.")
-
-    # Convert logits to a tensor
-    logits_tensor = torch.tensor(logits)
-
-    # Ensure logits_tensor has the right number of dimensions
+    logits_tensor = torch.tensor(logits)# Convert logits to a tensor
     if logits_tensor.ndimension() == 1:
         logits_tensor = logits_tensor.unsqueeze(0)  # Adding batch dimension if missing
-
-    # Apply softmax to logits to get probabilities
-    probs = torch.softmax(logits_tensor, dim=1).numpy()
-
-
-    # Check the shape of probs
-    if probs.ndim != 2 or probs.shape[1] != len(class_names):
+    probs = torch.softmax(logits_tensor, dim=1).numpy()# Apply softmax to logits to get probabilities
+    if probs.ndim != 2 or probs.shape[1] != len(class_names): # Check the shape of probs
         print(f"Shape of probabilities: {probs.shape}")
         raise ValueError("Unexpected shape for probabilities: Ensure that the number of classes matches the second dimension of probs.")
-
-    # Create a DataFrame to store the data
     df = pd.DataFrame({
         "True Labels": [class_names[label] for label in labels],
         "Predicted Labels": [class_names[pred] for pred in predictions]
-    })
+    })# Create a DataFrame to store the data
     for i, class_name in enumerate(class_names):
         if i < probs.shape[1]:
             df[f'Probability {class_name}'] = probs[:, i]
         else:
             print(f"Index {i} is out of bounds for probabilities with shape {probs.shape}")
-
-    # Save the DataFrame to an Excel file
-    df.to_excel(output_path, index=False)
+    df.to_excel(output_path, index=False)# Save the DataFrame to an Excel file
     print(f"Predictions and probabilities saved to {output_path}")
 
-  
-
-
-
-
-# Function to plot confusion matrix
-def plot_confusion_matrix(y_true, y_pred, class_names, normalize=False, output_path=None):
+def plot_confusion_matrix(y_true, y_pred, class_names, normalize=False, output_path=None):# Function to plot confusion matrix
     if len(y_true) == 0 or len(y_pred) == 0:
         print("Warning: Empty true or predicted labels. Skipping confusion matrix plotting.")
-        return
-    
+        return 
     cm = confusion_matrix(y_true, y_pred)
-    
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    
     plt.figure(figsize=(10, 7))
     sns.heatmap(cm, annot=True, fmt='.2f' if normalize else 'd', cmap='Blues',
                 xticklabels=class_names, yticklabels=class_names)
@@ -220,27 +168,17 @@ def plot_confusion_matrix(y_true, y_pred, class_names, normalize=False, output_p
         plt.show()
 
     plt.close()
-# Function to plot ROC curve
-def plot_roc_curve(labels, preds, num_classes, output_path=None):
-    # Convert preds to a tensor and print its shape
-    preds_tensor = torch.tensor(preds)
+
+def plot_roc_curve(labels, preds, num_classes, output_path=None):# Function to plot ROC curve
+    preds_tensor = torch.tensor(preds)# Convert preds to a tensor and print its shape
     print(f"Predictions tensor shape: {preds_tensor.shape}")
-    
     if preds_tensor.dim() != 2:
         raise ValueError("Predictions tensor should be 2D with shape (batch_size, num_classes).")
-
-    # Convert labels to one-hot encoding
-    labels_one_hot = np.eye(num_classes)[labels]
-    
-    # Apply softmax to get class probabilities
-    preds_prob = torch.softmax(preds_tensor, dim=1).numpy()
+    labels_one_hot = np.eye(num_classes)[labels]# Convert labels to one-hot encoding
+    preds_prob = torch.softmax(preds_tensor, dim=1).numpy()# Apply softmax to get class probabilities
     print(f"Predictions probabilities shape: {preds_prob.shape}")
-    
-    # Compute ROC curve and AUC
-    fpr, tpr, _ = roc_curve(labels_one_hot.ravel(), preds_prob.ravel())
+    fpr, tpr, _ = roc_curve(labels_one_hot.ravel(), preds_prob.ravel())# Compute ROC curve and AUC
     auc_roc = roc_auc_score(labels_one_hot, preds_prob, multi_class='ovr')
-
-    # Plot ROC curve
     plt.figure()
     plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (area = {auc_roc:.2f})')
     plt.plot([0, 1], [0, 1], color='gray', lw=2, linestyle='--')
@@ -248,40 +186,28 @@ def plot_roc_curve(labels, preds, num_classes, output_path=None):
     plt.ylabel('True Positive Rate')
     plt.title(f'AUC-ROC Curve (AUC = {auc_roc:.2f})')
     plt.legend(loc="lower right")
-
     if output_path:
         plt.savefig(output_path)
         print(f"ROC curve saved to {output_path}")
     else:
         plt.show()
-
     plt.close()
 def plot_roc_curves_by_class(labels, preds, num_classes, class_names, output_path=None):
-    # Convert predictions to tensor
-    preds_tensor = torch.tensor(preds)
-    
+    preds_tensor = torch.tensor(preds) # Convert predictions to tensor
     if preds_tensor.dim() != 2:
         raise ValueError("Predictions tensor should be 2D with shape (batch_size, num_classes).")
-
-    # Convert labels to one-hot encoding
-    labels_one_hot = np.eye(num_classes)[labels]
-    
-    # Apply softmax to get class probabilities
-    preds_prob = torch.softmax(preds_tensor, dim=1).numpy()
-
+    labels_one_hot = np.eye(num_classes)[labels]# Convert labels to one-hot encoding
+    preds_prob = torch.softmax(preds_tensor, dim=1).numpy()# Apply softmax to get class probabilities
     plt.figure(figsize=(10, 8))
-    
     for i in range(num_classes):
         fpr, tpr, _ = roc_curve(labels_one_hot[:, i], preds_prob[:, i])
         auc_roc = roc_auc_score(labels_one_hot[:, i], preds_prob[:, i])
         plt.plot(fpr, tpr, lw=2, label=f'{class_names[i]} (area = {auc_roc:.2f})')
-    
     plt.plot([0, 1], [0, 1], color='gray', linestyle='--', lw=2)
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('ROC Curves for Each Class')
     plt.legend(loc='lower right')
-
     if output_path:
         plt.savefig(output_path)
         print(f"ROC curves for each class saved to {output_path}")
@@ -289,17 +215,13 @@ def plot_roc_curves_by_class(labels, preds, num_classes, class_names, output_pat
         plt.show()
     
     plt.close()
-
-# Function to calculate specificity
-# Function to calculate specificity
-def calculate_specificity(y_true, y_pred):
+    
+def calculate_specificity(y_true, y_pred):# Function to calculate specificity
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
     return tn / (tn + fp)
 
 def generate_metrics_report(y_true, y_pred, class_columns, output_path=None):
     metrics_report = {}
-
-    # Convert lists to numpy arrays if needed
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
 
@@ -395,27 +317,23 @@ def generate_metrics_report(y_true, y_pred, class_columns, output_path=None):
 
     return metrics_report, metrics_report_json
 
-# Function to save epoch metrics to an Excel sheet
-def save_epoch_metrics_to_excel(epoch_metrics, output_path):
+
+def save_epoch_metrics_to_excel(epoch_metrics, output_path):# Function to save epoch metrics to an Excel sheet
     df = pd.DataFrame(epoch_metrics)
     df.to_excel(output_path, index=False)
     print(f"Epoch metrics saved to {output_path}")
 
 
-# Training and validation loop
-def train_and_validate_model(train_loader, val_loader, model, criterion, optimizer, num_epochs=1, output_folder='results_den169_atten_focal_try'):
+
+def train_and_validate_model(train_loader, val_loader, model, criterion, optimizer, num_epochs=1, output_folder='results_den169_atten_focal_try'):# Training and validation loop
     os.makedirs(output_folder, exist_ok=True)
     model.to(device)
-
-    
-    # Lists to store metrics
     train_losses = []
     val_losses = []
     train_accuracies = []
     val_accuracies = []
     epoch_metrics = []
-    for epoch in range(num_epochs):
-        # Training Phase
+    for epoch in range(num_epochs):# Training Phase
         model.train()
         running_loss = 0.0
         correct_train = 0
@@ -428,8 +346,6 @@ def train_and_validate_model(train_loader, val_loader, model, criterion, optimiz
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            
-            # Calculate accuracy
             _, preds = torch.max(outputs, 1)
             correct_train += (preds == labels).sum().item()
             total_train += labels.size(0)
