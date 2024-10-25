@@ -83,12 +83,12 @@ class attention_model(nn.Module):
         out = out.view(batch_size, c, h, w)  # Reshape back to original dimensions
         out = out + x # Add residual connection
         return out
-class MobileNetV3Class(nn.Module):
+class model_mobilenetv3(nn.Module):
     def __init__(self, num_classes=10, attention_size=64):
-        super(MobileNetV3ClassifierWithAttention, self).__init__()
+        super(model_mobilenetv3, self).__init__()
         self.mobilenet_v3 = models.mobilenet_v3_large(weights='DEFAULT')# Load the pre-trained MobileNetV3 Large model
         in_features = self.mobilenet_v3.classifier[0].in_features # Get the number of input features for the classifier layer
-        self.self_attention = SelfAttention(in_channels=in_features, attention_size=attention_size)# Add self-attention block after certain layers
+        self.self_attention = attention_model(in_channels=in_features, attention_size=attention_size)# Add self-attention block after certain layers
         self.mobilenet_v3.classifier = nn.Sequential(
             nn.Linear(in_features, num_classes)
         )
@@ -325,7 +325,7 @@ def save_epoch_metrics_to_excel(epoch_metrics, output_path):# Function to save e
 
 
 
-def train_and_validate_model(train_loader, val_loader, model, criterion, optimizer, num_epochs=1, output_folder='results_den169_atten_focal_try'):# Training and validation loop
+def train_and_validate_model(train_loader, val_loader, model, criterion, optimizer, num_epochs=50, output_folder='model_mobilenet_v3'):# Training and validation loop
     os.makedirs(output_folder, exist_ok=True)
     model.to(device)
     train_losses = []
@@ -467,14 +467,14 @@ def train_and_validate_model(train_loader, val_loader, model, criterion, optimiz
     )
 batch_size = 32
 learning_rate = 1e-4
-num_epochs = 1
-train_dir = 'proc_train'
-val_dir = 'valid_new'
+num_epochs = 50
+train_dir = 'training'
+val_dir = 'validation'
 train_loader, val_loader, train_dataset, val_dataset = create_dataloaders(train_dir, val_dir, batch_size=batch_size)
 
-model = DenseNet169WithAttention(num_classes=len(class_columns))
+model = model_mobilenetv3(num_classes=len(class_columns))
 class_weights = calculate_class_weights(train_dataset).to(device)
 criterion = FocalLoss(alpha=0.25, gamma=2.0)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-train_and_validate_model(train_loader, val_loader, model, criterion, optimizer, num_epochs=1)
+train_and_validate_model(train_loader, val_loader, model, criterion, optimizer, num_epochs=50)
