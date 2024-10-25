@@ -63,9 +63,9 @@ def create_dataloaders(train_dir, val_dir, batch_size=32):# Define data loaders 
 
     return train_loader, val_loader, train_dataset, val_dataset
     
-class attention_model(nn.Module):
+class attention(nn.Module):
     def __init__(self, in_channels, attention_size):
-        super(attention_model, self).__init__()
+        super(attention, self).__init__()
         self.query = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.key = nn.Conv2d(in_channels, attention_size, kernel_size=1)
         self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1)
@@ -83,9 +83,9 @@ class attention_model(nn.Module):
         out = out.view(batch_size, c, h, w)  # Reshape back to original dimensions
         out = out + x # Add residual connection
         return out
-class model_mobilenetv3(nn.Module):
+class mobilenetv3(nn.Module):
     def __init__(self, num_classes=10, attention_size=64):
-        super(model_mobilenetv3, self).__init__()
+        super(mobilenetv3, self).__init__()
         self.mobilenet_v3 = models.mobilenet_v3_large(weights='DEFAULT')# Load the pre-trained MobileNetV3 Large model
         in_features = self.mobilenet_v3.classifier[0].in_features # Get the number of input features for the classifier layer
         self.self_attention = attention_model(in_channels=in_features, attention_size=attention_size)# Add self-attention block after certain layers
@@ -472,7 +472,7 @@ train_dir = 'training'
 val_dir = 'validation'
 train_loader, val_loader, train_dataset, val_dataset = create_dataloaders(train_dir, val_dir, batch_size=batch_size)
 
-model = model_mobilenetv3(num_classes=len(class_columns))
+model = mobilenetv3(num_classes=len(class_columns))
 class_weights = calculate_class_weights(train_dataset).to(device)
 criterion = FocalLoss(alpha=0.25, gamma=2.0)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
