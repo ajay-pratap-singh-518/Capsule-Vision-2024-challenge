@@ -36,6 +36,7 @@ python valid/valid.py
 python valid/valid.py
 
 **Achievement**
+
 We are happy to announce that our team ranked 13th in the Capsule Vision 2024 Challenge, with 150 teams participating globally. Out of these, only 35 teams submitted their entries, and after review, 27 teams were selected for evaluation. We thank the organizers for this opportunity to showcase our model for multi-class classification in video capsule endoscopy.
 
 **Citations**
